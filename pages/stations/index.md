@@ -14,14 +14,14 @@ title: Explore Your Commute
 ```sql origin_station
 
 Select distinct Origin_Station_Complex_Name as origin
-from mta_d.orig_dest_cleaned
+from mta_d.origin_dest_ridership_daily
 
 ```
 
 ```sql destination_station
 
 Select distinct Destination_Station_Complex_Name as dest
-from mta_d.orig_dest_cleaned
+from mta_d.origin_dest_ridership_daily
 where Origin_Station_Complex_Name = '${inputs.origin.value}'
 
 ```
@@ -53,7 +53,7 @@ SELECT
     SUM(Estimated_Average_Ridership) AS riders, 
     Day_of_Week
 FROM 
-    mta_d.orig_dest_cleaned
+    mta_d.origin_dest_ridership_daily
 WHERE 
     Origin_Station_Complex_Name = '${inputs.origin.value}' 
     AND Destination_Station_Complex_Name = '${inputs.dest.value}'
@@ -121,7 +121,7 @@ SELECT
         WHEN Month = 12 THEN 'December'
     END AS Mnth
 FROM 
-    mta_d.orig_dest_cleaned
+    mta_d.origin_dest_ridership_daily
 WHERE 
     Origin_Station_Complex_Name = '${inputs.origin.value}' 
     AND Destination_Station_Complex_Name = '${inputs.dest.value}'
@@ -142,7 +142,7 @@ ORDER BY
 ```sql top_dest_from_origin
 
 Select SUM(Estimated_Average_Ridership) as riders, Destination_Station_Complex_Name as Destination
-from mta_d.orig_dest_cleaned
+from mta_d.origin_dest_ridership_daily
 where Origin_Station_Complex_Name = '${inputs.origin.value}'
 group by all
 order by riders desc
@@ -153,7 +153,7 @@ limit 10
 ```sql top_inflow_to_orig
 
 Select SUM(Estimated_Average_Ridership) as riders, Origin_Station_Complex_Name as Origin
-from mta_d.orig_dest_cleaned
+from mta_d.origin_dest_ridership_daily
 where Destination_Station_Complex_Name = '${inputs.dest.value}'
 group by all
 order by riders desc
