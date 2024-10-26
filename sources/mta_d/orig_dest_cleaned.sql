@@ -1,0 +1,1 @@
+Select * from or_des_clean
