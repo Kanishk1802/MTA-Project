@@ -15,6 +15,7 @@ WITH cleaned_stations AS (
         SUM(Estimated_Average_Ridership) AS Total_Ridership  -- Aggregate ridership for each station
     FROM 
         mta_d.origin_dest_ridership_daily
+    where Origin_Station_Complex_Name NOT LIKE '%/%'
     GROUP BY 
         TRIM(SPLIT_PART(Origin_Station_Complex_Name, '(', 1)), Origin_Point, Station_Full_Name
 ),
@@ -217,7 +218,7 @@ ORDER BY
 
 
 
-<DataTable data={stations_table} link=Station_Nam search = true>  	
+<DataTable data={stations_table} link=Station_Name search = true>  	
     <Column id=Station_Name title="Station" /> 	
     <Column id="Total_Crime_Weight" title="Weighted Total Crime Score" contentType=colorscale scaleColor=red align=centre/> 	
     <Column id="Total_Ridership" title="Total Riders" contentType=colorscale scaleColor= gold align=centre/> 	

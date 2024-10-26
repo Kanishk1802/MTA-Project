@@ -15,6 +15,7 @@ title: Explore Your Commute
 
 Select distinct Origin_Station_Complex_Name as origin
 from mta_d.origin_dest_ridership_daily
+where Origin_Station_Complex_Name NOT LIKE '%/%'
 
 ```
 
@@ -22,7 +23,7 @@ from mta_d.origin_dest_ridership_daily
 
 Select distinct Destination_Station_Complex_Name as dest
 from mta_d.origin_dest_ridership_daily
-where Origin_Station_Complex_Name = '${inputs.origin.value}'
+where Origin_Station_Complex_Name = '${inputs.origin.value}' AND Destination_Station_Complex_Name NOT LIKE '%/%'
 
 ```
 
@@ -143,7 +144,7 @@ ORDER BY
 
 Select SUM(Estimated_Average_Ridership) as riders, Destination_Station_Complex_Name as Destination
 from mta_d.origin_dest_ridership_daily
-where Origin_Station_Complex_Name = '${inputs.origin.value}'
+where Origin_Station_Complex_Name = '${inputs.origin.value}' and Destination_Station_Complex_Name NOT LIKE '%/%'
 group by all
 order by riders desc
 limit 10
@@ -154,7 +155,7 @@ limit 10
 
 Select SUM(Estimated_Average_Ridership) as riders, Origin_Station_Complex_Name as Origin
 from mta_d.origin_dest_ridership_daily
-where Destination_Station_Complex_Name = '${inputs.dest.value}'
+where Destination_Station_Complex_Name = '${inputs.dest.value}' and Origin_Station_Complex_Name NOT LIKE '%/%'
 group by all
 order by riders desc
 limit 10
@@ -171,7 +172,7 @@ SELECT distinct
 
 FROM 
     mta_d.origin_dest_ridership_daily
-where Origin_Station_Complex_Name in ('${inputs.origin.value}', '${inputs.dest.value}')
+where Origin_Station_Complex_Name in ('${inputs.origin.value}', '${inputs.dest.value}') 
 
 ```
 
