@@ -262,7 +262,7 @@ SELECT
     c.OFNS_DESC as Offense,
     COUNT(*) AS total_crimes  -- Total number of crimes
 FROM 
-    mta_d.nypd_subway_crimes_report c
+    mta.nypd_subway_crimes_report c
 JOIN 
     cleaned_station s
 ON 
