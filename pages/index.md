@@ -13,7 +13,7 @@ Subway stations are mapped based on their location and matched with reported cri
 
 ## How to Use This Tool
 
-- Use the "Explore All NYC Stations' page to explore safety rating for all stations across NYC.
+- Use the "Explore All NYC Stations' page to explore safety ratings/stats for all stations across NYC.
 - Use the "Explore Your Commute" page to explore details specific to travel between two stations.
 - Use the links in the map tool tip or data-tables to explore the crime data page for a specific station.
 
