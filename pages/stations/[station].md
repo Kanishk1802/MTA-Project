@@ -1,6 +1,6 @@
 <LetterGrade    
-  name= {params.station}    
-  grade={station_info[0].Letter_Grade}
+  name= {station_info[0].Station_Name}    
+  grade={station_info[0].Grade}
 />
 
 
@@ -11,7 +11,7 @@
 WITH cleaned_stations AS (
     -- Extract station name, coordinates, and ridership for all stations
     SELECT DISTINCT
-        TRIM(SPLIT_PART(Origin_Station_Complex_Name, '(', 1)) AS Station_Name,  -- Extract station name before '('
+        link_friendly_id,  -- Extract station name before '('
         Origin_Point,
         Origin_Station_Complex_Name as Station_Full_Name,
         CAST(TRIM(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 1)) AS DOUBLE) AS Longitude,
@@ -19,8 +19,9 @@ WITH cleaned_stations AS (
         SUM(Estimated_Average_Ridership) AS Total_Ridership  -- Aggregate ridership for each station
     FROM 
         mta_d.origin_dest_ridership_daily
+    --where Origin_Station_Complex_Name NOT LIKE '%/%'
     GROUP BY 
-        TRIM(SPLIT_PART(Origin_Station_Complex_Name, '(', 1)), Origin_Point, Station_Full_Name
+     Origin_Point, Station_Full_Name, link_friendly_id
 ),
 
 crime_data AS (
@@ -47,6 +48,7 @@ crime_per_capita AS (
     SELECT 
         
         s.Station_Full_Name,
+        s.link_friendly_id,
         s.Latitude,
         s.Longitude,
         SUM(cd.crime_weight) AS Total_Crime_Weight,  -- Total crime severity score for each station
@@ -65,12 +67,13 @@ crime_per_capita AS (
             )
         ) <= 0.2  -- 
     GROUP BY 
-        s.Station_Full_Name, s.Latitude, s.Longitude, s.Total_Ridership
+        s.Station_Full_Name, s.link_friendly_id, s.Latitude, s.Longitude, s.Total_Ridership
 )
 
 -- Assign letter grade based on the calculated safety grade
 SELECT
     Station_Full_Name as Station_Name,
+    link_friendly_id,
     Latitude,
     Longitude,
     Total_Crime_Weight,
@@ -85,12 +88,11 @@ SELECT
         WHEN (100 - NTILE(100) OVER (ORDER BY Crime_Per_Capita ASC)) >= 50 THEN 'C'
         WHEN (100 - NTILE(100) OVER (ORDER BY Crime_Per_Capita ASC)) >= 25 THEN 'D'
         ELSE 'F'
-    END AS Letter_Grade  -- Assign letter grade based on the percentile
+    END AS  Grade  -- Assign letter grade based on the percentile
 FROM 
     crime_per_capita
 ORDER BY 
-    Safety_Grade 
-
+    Safety_Grade
 
 
 
@@ -101,7 +103,7 @@ ORDER BY
 ```sql station_info
 Select * from 
 ${station_all}
-where Station_Name = '${params.station}'
+where link_friendly_id = '${params.station}'
 ```
 
 
@@ -123,7 +125,7 @@ WITH cleaned_station AS (
     FROM 
         mta_d.origin_dest_ridership_daily
     WHERE 
-        Origin_Station_Complex_Name = '${params.station}'  -- Filter for the specific station
+        link_friendly_id = '${params.station}'  -- Filter for the specific station
 ),
 
 crime_data AS (
@@ -167,7 +169,7 @@ WITH cleaned_station AS (
         CAST(TRIM(REPLACE(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 2), ')', '')) AS DOUBLE) AS Latitude
     FROM 
         mta_d.origin_dest_ridership_daily
-    WHERE Origin_Station_Complex_Name = '${params.station}'
+    WHERE link_friendly_id = '${params.station}'
 )
 
 SELECT 
@@ -205,7 +207,7 @@ WITH cleaned_station AS (
         CAST(TRIM(REPLACE(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 2), ')', '')) AS DOUBLE) AS Latitude
     FROM 
         mta_d.origin_dest_ridership_daily
-    WHERE Origin_Station_Complex_Name = '${params.station}'
+    WHERE link_friendly_id = '${params.station}'
 )
 
 SELECT 
@@ -254,7 +256,7 @@ WITH cleaned_station AS (
         CAST(TRIM(REPLACE(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 2), ')', '')) AS DOUBLE) AS Latitude
     FROM 
         mta_d.origin_dest_ridership_daily
-    WHERE Origin_Station_Complex_Name = '${params.station}'
+    WHERE link_friendly_id = '${params.station}'
 )
 
 SELECT 
@@ -305,6 +307,11 @@ limit 10
     value=Station_Name
     color = blue
     startingZoom = 13
+    tooltipType=click
+    tooltip={[
+            {id: 'Station_Name', showColumnName: false, valueClass: 'font-bold text-lg'},
+            {id: 'Grade'}
+            ]}
 />
 </Group>
 
@@ -350,18 +357,5 @@ limit 10
 />
 
 </Grid>
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

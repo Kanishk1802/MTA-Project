@@ -6,5 +6,5 @@ FROM (
         *,
         ROW_NUMBER() OVER (PARTITION BY Origin_Station_Complex_Name ORDER BY Origin_Station_Complex_Name) AS row_num
     FROM or_des_rd
-) AS subquery
+) AS subquery 
 

@@ -15,7 +15,6 @@ title: Explore Your Commute
 
 Select distinct Origin_Station_Complex_Name as origin
 from mta_d.origin_dest_ridership_daily
-where Origin_Station_Complex_Name NOT LIKE '%/%'
 
 ```
 
@@ -23,7 +22,7 @@ where Origin_Station_Complex_Name NOT LIKE '%/%'
 
 Select distinct Destination_Station_Complex_Name as dest
 from mta_d.origin_dest_ridership_daily
-where Origin_Station_Complex_Name = '${inputs.origin.value}' AND Destination_Station_Complex_Name NOT LIKE '%/%'
+where Origin_Station_Complex_Name = '${inputs.origin.value}'
 
 ```
 
@@ -45,7 +44,7 @@ where Origin_Station_Complex_Name = '${inputs.origin.value}' AND Destination_Sta
   tooltipType=click
   tooltip={[
             {id: 'Station_Name', showColumnName: false, valueClass: 'font-bold text-lg'},
-            {id: 'Station_Name', showColumnName: false, contentType: 'link', valueClass: 'font-bold mt-1'}]}
+            {id: 'link_friendly_id', title: 'Station_Link', linkLabel: 'Station Deep Dive', showColumnName: false, contentType: 'link', valueClass: 'font-bold mt-1'}]}
 />
 
 ```sql ridership_dow
@@ -166,7 +165,7 @@ limit 10
 ```sql station_locations
 
 SELECT distinct
-    Origin_Station_Complex_Name as Station_Name,  Origin_Point,
+    Origin_Station_Complex_Name as Station_Name,  Origin_Point, link_friendly_id,
    CAST(TRIM(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 1)) AS DOUBLE) AS Longitude,
     CAST(TRIM(REPLACE(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 2), ')', '')) AS DOUBLE) AS Latitude
 
@@ -189,6 +188,7 @@ WITH cleaned_stations AS (
     -- Extract station name, coordinates, and ridership for the selected station
     SELECT DISTINCT
         Origin_Station_Complex_Name AS Station_Name,
+        link_friendly_id,
         Origin_Point,
         CAST(TRIM(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 1)) AS DOUBLE) AS Longitude,
         CAST(TRIM(REPLACE(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 2), ')', '')) AS DOUBLE) AS Latitude,
@@ -198,20 +198,21 @@ WITH cleaned_stations AS (
     WHERE 
         Origin_Station_Complex_Name = '${inputs.origin.value}'  -- Filter for the specific station
     GROUP BY 
-        Station_Name, Origin_Point
+        Station_Name, Origin_Point, link_friendly_id
 ),
 
 nearby_stations AS (
     -- Find stations within 500 meters of the selected station
     SELECT 
         Origin_Station_Complex_Name AS Station_Name,
+        link_friendly_id,
         CAST(TRIM(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 1)) AS DOUBLE) AS Longitude,
         CAST(TRIM(REPLACE(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 2), ')', '')) AS DOUBLE) AS Latitude,
         SUM(Estimated_Average_Ridership) AS Total_Ridership
     FROM 
         mta_d.origin_dest_ridership_daily
     GROUP BY 
-        Station_Name, Origin_Point
+        Station_Name, Origin_Point, link_friendly_id
     HAVING 
         (
             6371 * ACOS(
@@ -244,6 +245,7 @@ crime_data AS (
 -- Calculate crime per capita and assign safety grades
 SELECT 
     s.Station_Name,
+    s.link_friendly_id,
     SUM(cd.crime_weight) AS Total_Crime_Weight,
     s.Total_Ridership,
     SUM(cd.crime_weight) / s.Total_Ridership AS Crime_Per_Capita,
@@ -271,7 +273,7 @@ JOIN
         )
     ) <= 0.2  -- Filter crimes within 200 meters of each nearby station
 GROUP BY 
-    s.Station_Name, s.Total_Ridership
+    s.Station_Name, s.Total_Ridership, s.link_friendly_id
 ORDER BY 
     Safety_Grade DESC
 
@@ -285,6 +287,7 @@ WITH cleaned_stations AS (
     -- Extract station name, coordinates, and ridership for the selected station
     SELECT DISTINCT
         Origin_Station_Complex_Name AS Station_Name,
+        link_friendly_id,
         Origin_Point,
         CAST(TRIM(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 1)) AS DOUBLE) AS Longitude,
         CAST(TRIM(REPLACE(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 2), ')', '')) AS DOUBLE) AS Latitude,
@@ -294,20 +297,21 @@ WITH cleaned_stations AS (
     WHERE 
         Origin_Station_Complex_Name = '${inputs.dest.value}'  -- Filter for the specific station
     GROUP BY 
-        Station_Name, Origin_Point
+        Station_Name, Origin_Point, link_friendly_id
 ),
 
 nearby_stations AS (
     -- Find stations within 500 meters of the selected station
     SELECT 
         Origin_Station_Complex_Name AS Station_Name,
+        link_friendly_id,
         CAST(TRIM(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 1)) AS DOUBLE) AS Longitude,
         CAST(TRIM(REPLACE(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 2), ')', '')) AS DOUBLE) AS Latitude,
         SUM(Estimated_Average_Ridership) AS Total_Ridership
     FROM 
         mta_d.origin_dest_ridership_daily
     GROUP BY 
-        Station_Name, Origin_Point
+        Station_Name, Origin_Point, link_friendly_id
     HAVING 
         (
             6371 * ACOS(
@@ -340,6 +344,7 @@ crime_data AS (
 -- Calculate crime per capita and assign safety grades
 SELECT 
     s.Station_Name,
+    s.link_friendly_id,
     SUM(cd.crime_weight) AS Total_Crime_Weight,
     s.Total_Ridership,
     SUM(cd.crime_weight) / s.Total_Ridership AS Crime_Per_Capita,
@@ -367,7 +372,7 @@ JOIN
         )
     ) <= 0.2  -- Filter crimes within 200 meters of each nearby station
 GROUP BY 
-    s.Station_Name, s.Total_Ridership
+    s.Station_Name, s.Total_Ridership, s.link_friendly_id
 ORDER BY 
     Safety_Grade DESC
 
@@ -422,7 +427,7 @@ The below tables showcase nearby stations (within 500m to origin/dest) and their
 <Tabs>
   <Tab label='Stations Near Origin'>
 
-    <DataTable data={stations_orig} link=Station_Name>  	
+    <DataTable data={stations_orig} link=link_friendly_id>  	
     <Column id=Station_Name title="Station" /> 	
     <Column id="Total_Crime_Weight" title="Weighted Total Crime Score" contentType=colorscale scaleColor=red align=centre/> 	
     <Column id="Total_Ridership" title="Total Riders" contentType=colorscale scaleColor= gold align=centre/> 	
@@ -432,7 +437,7 @@ The below tables showcase nearby stations (within 500m to origin/dest) and their
   </Tab>
   <Tab label='Stations Near Destination'>
     
-    <DataTable data={stations_dest} link=Station_Name>  	
+    <DataTable data={stations_dest} link=link_friendly_id>  	
     <Column id=Station_Name title="Station" /> 	
     <Column id="Total_Crime_Weight" title="Weighted Total Crime Score" contentType=colorscale scaleColor=red align=centre/> 	
     <Column id="Total_Ridership" title="Total Riders" contentType=colorscale scaleColor= gold align=centre/> 	
