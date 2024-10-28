@@ -381,9 +381,99 @@ ORDER BY
 
 
 
+{#each unfilt_stations as row}
+<a href= "/stations/{row.link_friendly_id}"/>
+{/each}
 
 
 
+```sql unfilt_stations
+WITH cleaned_stations AS (
+    -- Extract station name, coordinates, and ridership for all stations
+    SELECT DISTINCT
+        link_friendly_id, -- Extract station name before '('
+        Origin_Point,
+        Origin_Station_Complex_Name as Station_Full_Name,
+        CAST(TRIM(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 1)) AS DOUBLE) AS Longitude,
+        CAST(TRIM(REPLACE(SPLIT_PART(SUBSTR(Origin_Point, INSTR(Origin_Point, '(') + 1), ' ', 2), ')', '')) AS DOUBLE) AS Latitude,
+        SUM(Estimated_Average_Ridership) AS Total_Ridership  -- Aggregate ridership for each station
+    FROM 
+        mta_d.origin_dest_ridership_daily
+    --where Origin_Station_Complex_Name NOT LIKE '%/%'
+    GROUP BY 
+         Origin_Point, Station_Full_Name, link_friendly_id
+),
+
+crime_data AS (
+    -- Aggregate crimes by severity for all stations
+    SELECT 
+        c.LAW_CAT_CD,
+        CASE 
+            WHEN c.LAW_CAT_CD = 'FELONY' THEN 3  -- Assign weight 3 for felonies
+            WHEN c.LAW_CAT_CD = 'MISDEMEANOR' THEN 2  -- Assign weight 2 for misdemeanors
+            WHEN c.LAW_CAT_CD = 'VIOLATION' THEN 1  -- Assign weight 1 for violations
+            ELSE 0
+        END AS crime_weight,
+        c.Latitude AS Cr_Lat, 
+        c.Longitude AS Cr_Long,
+        c.CMPLNT_FR_DT as complaint_date
+    FROM 
+        mta.nypd_subway_crimes_report c
+    WHERE 
+        c.CMPLNT_FR_DT BETWEEN '2024-01-01' AND '2024-08-31'  -- Date range for crimes
+),
+
+crime_per_capita AS (
+    -- Calculate crime per capita for each station
+    SELECT 
+        
+        s.Station_Full_Name,
+        s.link_friendly_id,
+        s.Latitude,
+        s.Longitude,
+        SUM(cd.crime_weight) AS Total_Crime_Weight,  -- Total crime severity score for each station
+        s.Total_Ridership,  -- Total ridership for each station
+        SUM(cd.crime_weight) / s.Total_Ridership AS Crime_Per_Capita  -- Crime score per rider
+    FROM 
+        crime_data cd
+    JOIN 
+        cleaned_stations s 
+    ON 
+        (
+            6371 * ACOS(
+                COS(RADIANS(s.Latitude)) * COS(RADIANS(cd.Cr_Lat)) * 
+                COS(RADIANS(cd.Cr_Long) - RADIANS(s.Longitude)) + 
+                SIN(RADIANS(s.Latitude)) * SIN(RADIANS(cd.Cr_Lat))
+            )
+        ) <= 0.2  -- 
+    GROUP BY 
+        s.Station_Full_Name, s.link_friendly_id, s.Latitude, s.Longitude, s.Total_Ridership
+)
+
+-- Assign letter grade based on the calculated safety grade
+SELECT
+    Station_Full_Name as Station_Name,
+    link_friendly_id,
+    Latitude,
+    Longitude,
+    Total_Crime_Weight,
+    Total_Ridership,
+    Crime_Per_Capita,
+    -- Rank crime per capita and scale to a 100-point grade
+    100 - NTILE(100) OVER (ORDER BY Crime_Per_Capita ASC) AS Safety_Grade,
+    -- Assign letter grades based on safety grade thresholds
+    CASE 
+        WHEN (100 - NTILE(100) OVER (ORDER BY Crime_Per_Capita ASC)) >= 90 THEN 'A'
+        WHEN (100 - NTILE(100) OVER (ORDER BY Crime_Per_Capita ASC)) >= 75 THEN 'B'
+        WHEN (100 - NTILE(100) OVER (ORDER BY Crime_Per_Capita ASC)) >= 50 THEN 'C'
+        WHEN (100 - NTILE(100) OVER (ORDER BY Crime_Per_Capita ASC)) >= 25 THEN 'D'
+        ELSE 'F'
+    END AS  Grade  -- Assign letter grade based on the percentile
+FROM 
+    crime_per_capita
+ORDER BY 
+    Safety_Grade 
+```
 
 
 

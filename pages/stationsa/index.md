@@ -134,14 +134,21 @@ ORDER BY
 
 ```
 
+```sql unfilt_stations
+SELECT
+    Station_Name,
+    link_friendly_id,
+    Latitude,
+    Longitude,
+    Total_Crime_Weight,
+    Total_Ridership,
+    Crime_Per_Capita,
+    Grade, -- Assign letter grade based on the percentile
+FROM 
+    ${stations}
+```
 
 
-
-
-
-
-
-# MTA Subway Station Safety Assessment Tool
 
 <Details title='Scoring System'>
 
@@ -219,6 +226,9 @@ ORDER BY
     <Column id="Grade" title="Grade"  align=centre/> 	
 </DataTable>
 
+{#each unfilt_stations as row}
+<a href= "/stationsa/{row.link_friendly_id}"/>
+{/each}
 
 ### Total Subway Station Crimes by Borough
 <AreaChart
@@ -227,3 +237,8 @@ ORDER BY
     y=Total_Crimes
     series = Borough
 />
+
+
+
+
+
