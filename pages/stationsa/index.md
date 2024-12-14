@@ -196,9 +196,9 @@ FROM
 
 
 
+## Station Ranking
 
-
-<DataTable data={stations_table} link=link_friendly_id search = true rows= 25>  	
+<DataTable data={stations_table} link=link_friendly_id search = true rows= 25 >  	
     <Column id=Station_Name title="Station" /> 	
     <Column id="Total_Crime_Weight" title="Weighted Total Crime Score" contentType=colorscale scaleColor=red align=centre/> 	
     <Column id="Total_Ridership" title="Total Riders" contentType=colorscale scaleColor= gold align=centre/> 	
